@@ -7,6 +7,7 @@ import 'services/duplicate_detector_service.dart';
 import 'services/export_service.dart';
 import 'services/file_delete_service.dart';
 import 'services/history_service.dart';
+import 'services/permission_service.dart';
 import 'services/storage_scan_service.dart';
 import 'theme/app_theme.dart';
 
@@ -22,6 +23,7 @@ class NabuCleanerApp extends StatelessWidget {
         Provider(create: (_) => DuplicateDetectorService()),
         Provider(create: (_) => HistoryService()),
         Provider(create: (_) => ExportService()),
+        Provider(create: (_) => PermissionService()),
         ChangeNotifierProvider(
           create: (context) => CleanerProvider(
             storageScanService: context.read<StorageScanService>(),
@@ -29,6 +31,7 @@ class NabuCleanerApp extends StatelessWidget {
             duplicateDetectorService: context.read<DuplicateDetectorService>(),
             historyService: context.read<HistoryService>(),
             exportService: context.read<ExportService>(),
+            permissionService: context.read<PermissionService>(),
           )..initialize(),
         ),
       ],

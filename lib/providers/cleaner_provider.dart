@@ -10,6 +10,7 @@ import '../services/duplicate_detector_service.dart';
 import '../services/export_service.dart';
 import '../services/file_delete_service.dart';
 import '../services/history_service.dart';
+import '../services/permission_service.dart';
 import '../services/storage_scan_service.dart';
 
 class CleanerProvider extends ChangeNotifier {
@@ -19,17 +20,20 @@ class CleanerProvider extends ChangeNotifier {
     required DuplicateDetectorService duplicateDetectorService,
     required HistoryService historyService,
     required ExportService exportService,
+    required PermissionService permissionService,
   }) : _storageScanService = storageScanService,
        _fileDeleteService = fileDeleteService,
        _duplicateDetectorService = duplicateDetectorService,
        _historyService = historyService,
-       _exportService = exportService;
+       _exportService = exportService,
+       _permissionService = permissionService;
 
   final StorageScanService _storageScanService;
   final FileDeleteService _fileDeleteService;
   final DuplicateDetectorService _duplicateDetectorService;
   final HistoryService _historyService;
   final ExportService _exportService;
+  final PermissionService _permissionService;
 
   bool isInitializing = true;
   bool isScanning = false;
@@ -210,6 +214,7 @@ class CleanerProvider extends ChangeNotifier {
 
     try {
       return await _storageScanService.runRealScan(
+        permissionService: _permissionService,
         onProgress: (progress, message) {
           scanProgress = progress;
           scanMessage = message;

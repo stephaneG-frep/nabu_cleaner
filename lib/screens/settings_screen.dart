@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/cleaner_provider.dart';
+import '../services/permission_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -13,10 +14,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  PermissionStatus? _storageStatus;
-  PermissionStatus? _photosStatus;
-  PermissionStatus? _videosStatus;
-  PermissionStatus? _audioStatus;
+  Map<Permission, PermissionStatus> _statuses = const {};
 
   @override
   void initState() {
@@ -25,30 +23,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _refreshStatus() async {
-    final statuses = await Future.wait([
-      Permission.storage.status,
-      Permission.photos.status,
-      Permission.videos.status,
-      Permission.audio.status,
-    ]);
-
+    final statusMap = await context.read<PermissionService>().checkStatuses();
     if (!mounted) return;
     setState(() {
-      _storageStatus = statuses[0];
-      _photosStatus = statuses[1];
-      _videosStatus = statuses[2];
-      _audioStatus = statuses[3];
+      _statuses = statusMap;
     });
   }
 
   Future<void> _requestPermission() async {
-    await [
-      Permission.storage,
-      Permission.photos,
-      Permission.videos,
-      Permission.audio,
-    ].request();
+    await context.read<PermissionService>().requestRequired();
     await _refreshStatus();
+  }
+
+  Future<void> _openAndroidSettings() async {
+    await openAppSettings();
   }
 
   Future<void> _openFolderPicker() async {
@@ -64,9 +52,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return 'Non accordee';
   }
 
+  String _permissionName(Permission permission) {
+    if (permission == Permission.storage) {
+      return 'Stockage';
+    }
+    if (permission == Permission.photos) {
+      return 'Photos';
+    }
+    if (permission == Permission.videos) {
+      return 'Videos';
+    }
+    if (permission == Permission.audio) {
+      return 'Audio';
+    }
+    return permission.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CleanerProvider>();
+    final hasPermanentDenied = _statuses.values.any(
+      (status) => status.isPermanentlyDenied,
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Reglages')),
@@ -158,19 +165,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           Card(
             margin: EdgeInsets.zero,
-            child: ListTile(
-              leading: const Icon(Icons.lock_open_outlined),
-              title: const Text('Permissions stockage/media'),
-              subtitle: Text(
-                'Stockage: ${_statusLabel(_storageStatus)}\n'
-                'Photos: ${_statusLabel(_photosStatus)}\n'
-                'Videos: ${_statusLabel(_videosStatus)}\n'
-                'Audio: ${_statusLabel(_audioStatus)}',
-              ),
-              isThreeLine: true,
-              trailing: FilledButton.tonal(
-                onPressed: _requestPermission,
-                child: const Text('Demander'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.lock_open_outlined),
+                    title: const Text('Permissions requises (selon Android)'),
+                    subtitle: Text(
+                      _statuses.isEmpty
+                          ? 'Aucune permission requise ou statut indisponible.'
+                          : _statuses.entries
+                                .map(
+                                  (entry) =>
+                                      '${_permissionName(entry.key)}: ${_statusLabel(entry.value)}',
+                                )
+                                .join('\n'),
+                    ),
+                    isThreeLine: _statuses.length > 2,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      FilledButton.tonal(
+                        onPressed: _requestPermission,
+                        child: const Text('Demander'),
+                      ),
+                      if (hasPermanentDenied) ...[
+                        const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: _openAndroidSettings,
+                          child: const Text('Ouvrir reglages Android'),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (hasPermanentDenied) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Une permission est refusee en permanence. '
+                      'Ouvrez les reglages Android pour l\'autoriser manuellement.',
+                    ),
+                  ],
+                ],
               ),
             ),
           ),

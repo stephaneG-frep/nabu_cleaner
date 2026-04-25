@@ -3,12 +3,12 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../models/file_category.dart';
 import '../models/scan_file_item.dart';
 import '../models/scan_report.dart';
 import '../models/storage_overview.dart';
+import 'permission_service.dart';
 
 class StorageScanService {
   static const List<String> progressMessages = [
@@ -181,10 +181,17 @@ class StorageScanService {
   }
 
   Future<ScanReport> runRealScan({
+    required PermissionService permissionService,
     required void Function(double progress, String message) onProgress,
   }) async {
     onProgress(0.05, 'Verification des permissions de stockage...');
-    await _ensureAtLeastOneStoragePermission();
+    final hasPermission = await permissionService.ensureAccessForScan();
+    if (!hasPermission) {
+      throw StateError(
+        'Permission media non accordee. Autorisez Photos/Videos '
+        'dans les permissions Android de Nabu Cleaner.',
+      );
+    }
 
     onProgress(0.12, 'Preparation des dossiers utilisateur accessibles...');
     final roots = await _discoverRoots();
@@ -312,21 +319,6 @@ class StorageScanService {
       storage: const StorageOverview(totalBytes: 0, usedBytes: 0),
       files: files,
     );
-  }
-
-  Future<void> _ensureAtLeastOneStoragePermission() async {
-    final statuses = await Future.wait([
-      Permission.storage.status,
-      Permission.photos.status,
-      Permission.videos.status,
-      Permission.audio.status,
-    ]);
-
-    if (statuses.any((status) => status.isGranted || status.isLimited)) {
-      return;
-    }
-
-    throw StateError('Permission de stockage/media non accordee.');
   }
 
   Future<List<Directory>> _discoverRoots() async {

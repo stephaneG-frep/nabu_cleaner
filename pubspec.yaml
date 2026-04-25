@@ -39,6 +39,7 @@ dependencies:
   file_picker: ^10.3.3
   crypto: ^3.0.6
   intl: ^0.20.2
+  device_info_plus: ^11.5.0
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
