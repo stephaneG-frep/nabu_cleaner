@@ -18,6 +18,7 @@ class ResultsScreen extends StatefulWidget {
 
 class _ResultsScreenState extends State<ResultsScreen> {
   FileCategory? _categoryFilter;
+  bool _showRecommendedOnly = false;
   ResultsSort _sort = ResultsSort.sizeDesc;
 
   String _formatBytes(int bytes) {
@@ -33,9 +34,12 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   List<ScanFileItem> _applyFilterAndSort(List<ScanFileItem> source) {
+    final provider = context.read<CleanerProvider>();
     final filtered = source
         .where(
-          (item) => _categoryFilter == null || item.category == _categoryFilter,
+          (item) =>
+              (_categoryFilter == null || item.category == _categoryFilter) &&
+              (!_showRecommendedOnly || provider.isRecommendedDelete(item)),
         )
         .toList();
 
@@ -146,6 +150,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
+                          label: const Text('Recommandes'),
+                          selected: _showRecommendedOnly,
+                          onSelected: (value) =>
+                              setState(() => _showRecommendedOnly = value),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
                           label: const Text('Tout'),
                           selected: _categoryFilter == null,
                           onSelected: (_) =>
@@ -168,6 +181,34 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ],
                   ),
                 ),
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.tertiary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Recommandes: ${provider.recommendedCount} fichier(s) • ${_formatBytes(provider.recommendedBytes)}',
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: provider.recommendedCount == 0
+                            ? null
+                            : () => context
+                                  .read<CleanerProvider>()
+                                  .selectRecommended(),
+                        child: const Text('Tout selectionner'),
+                      ),
+                    ],
+                  ),
+                ),
                 Expanded(
                   child: visibleItems.isEmpty
                       ? const Center(
@@ -180,6 +221,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                             return FileResultTile(
                               item: item,
                               selected: provider.isSelected(item.id),
+                              recommended: provider.isRecommendedDelete(item),
                               onChanged: (value) =>
                                   provider.toggleSelection(item.id, value),
                             );

@@ -55,8 +55,13 @@ class CleanerProvider extends ChangeNotifier {
   List<HistoryEntry> get history => List.unmodifiable(_history);
   List<DuplicateGroup> get duplicateGroups =>
       List.unmodifiable(_duplicateGroups);
+  List<ScanFileItem> get recommendedItems =>
+      _results.where(isRecommendedDelete).toList(growable: false);
 
   int get selectedCount => _selectedResultIds.values.where((it) => it).length;
+  int get recommendedCount => recommendedItems.length;
+  int get recommendedBytes =>
+      recommendedItems.fold(0, (sum, item) => sum + item.sizeBytes);
 
   int get selectedBytes {
     return _results
@@ -136,6 +141,32 @@ class CleanerProvider extends ChangeNotifier {
   void clearSelection() {
     _selectedResultIds.clear();
     notifyListeners();
+  }
+
+  void selectRecommended() {
+    for (final item in recommendedItems) {
+      _selectedResultIds[item.id] = true;
+    }
+    notifyListeners();
+  }
+
+  bool isRecommendedDelete(ScanFileItem item) {
+    final ageDays = DateTime.now().difference(item.modifiedAt).inDays;
+    switch (item.category) {
+      case FileCategory.duplicate:
+        return true;
+      case FileCategory.apk:
+        return ageDays >= 7;
+      case FileCategory.archive:
+        return ageDays >= 14;
+      case FileCategory.large:
+        return item.sizeBytes >= 200 * 1024 * 1024 || ageDays >= 30;
+      case FileCategory.video:
+        return item.sizeBytes >= 500 * 1024 * 1024 && ageDays >= 30;
+      case FileCategory.photo:
+      case FileCategory.other:
+        return false;
+    }
   }
 
   Future<DeleteOperationResult> deleteSelected() async {

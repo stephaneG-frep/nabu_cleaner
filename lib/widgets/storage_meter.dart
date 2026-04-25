@@ -17,7 +17,7 @@ class StorageMeter extends StatelessWidget {
       value /= 1024;
       unitIndex++;
     }
-    final formatted = NumberFormat.decimalPattern('fr_FR').format(value);
+    final formatted = NumberFormat('#,##0.#', 'fr_FR').format(value);
     return '$formatted ${units[unitIndex]}';
   }
 

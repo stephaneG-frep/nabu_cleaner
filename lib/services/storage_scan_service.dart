@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/file_category.dart';
@@ -11,6 +12,10 @@ import '../models/storage_overview.dart';
 import 'permission_service.dart';
 
 class StorageScanService {
+  static const MethodChannel _storageChannel = MethodChannel(
+    'nabu_cleaner/storage',
+  );
+
   static const List<String> progressMessages = [
     'Verification des permissions de stockage...',
     'Analyse des dossiers utilisateurs accessibles...',
@@ -43,6 +48,15 @@ class StorageScanService {
     'webm',
     'm4v',
     '3gp',
+  };
+  static const Set<String> _imageExtensions = {
+    'jpg',
+    'jpeg',
+    'png',
+    'heic',
+    'webp',
+    'bmp',
+    'gif',
   };
 
   static const List<String> _blockedPrefixes = [
@@ -122,7 +136,7 @@ class StorageScanService {
         path: '/storage/emulated/0/DCIM/Camera/IMG_3801.jpg',
         name: 'IMG_3801.jpg',
         sizeBytes: 8 * 1024 * 1024,
-        category: FileCategory.duplicate,
+        category: FileCategory.photo,
         modifiedAt: now.subtract(const Duration(days: 5)),
         signature: 'dup_img_01',
       ),
@@ -313,12 +327,44 @@ class StorageScanService {
         .toList();
 
     files.sort((a, b) => b.sizeBytes.compareTo(a.sizeBytes));
+    final scannedBytes = files.fold<int>(
+      0,
+      (sum, item) => sum + item.sizeBytes,
+    );
+    final storageOverview = await _readDeviceStorageOverview(scannedBytes);
 
     onProgress(1, 'Scan termine. ${files.length} fichier(s) identifies.');
-    return ScanReport(
-      storage: const StorageOverview(totalBytes: 0, usedBytes: 0),
-      files: files,
+    return ScanReport(storage: storageOverview, files: files);
+  }
+
+  Future<StorageOverview> _readDeviceStorageOverview(int scannedBytes) async {
+    try {
+      final raw = await _storageChannel.invokeMapMethod<String, dynamic>(
+        'getStorageOverview',
+      );
+      if (raw == null) {
+        return _fallbackStorageOverview(scannedBytes);
+      }
+
+      final total = (raw['totalBytes'] as num?)?.toInt() ?? 0;
+      final used = (raw['usedBytes'] as num?)?.toInt() ?? 0;
+      if (total <= 0 || used < 0 || used > total) {
+        return _fallbackStorageOverview(scannedBytes);
+      }
+
+      return StorageOverview(totalBytes: total, usedBytes: used);
+    } catch (_) {
+      return _fallbackStorageOverview(scannedBytes);
+    }
+  }
+
+  StorageOverview _fallbackStorageOverview(int scannedBytes) {
+    final total = 256 * 1024 * 1024 * 1024;
+    final used = (scannedBytes * 1.1).toInt().clamp(
+      0,
+      total - (1024 * 1024 * 1024),
     );
+    return StorageOverview(totalBytes: total, usedBytes: used);
   }
 
   Future<List<Directory>> _discoverRoots() async {
@@ -397,6 +443,9 @@ class StorageScanService {
     }
     if (_videoExtensions.contains(ext)) {
       return FileCategory.video;
+    }
+    if (_imageExtensions.contains(ext)) {
+      return FileCategory.photo;
     }
     if (sizeBytes >= _largeFileThresholdBytes) {
       return FileCategory.large;

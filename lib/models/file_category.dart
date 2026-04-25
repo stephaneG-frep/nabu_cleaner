@@ -1,4 +1,4 @@
-enum FileCategory { large, duplicate, apk, archive, video, other }
+enum FileCategory { large, duplicate, apk, archive, video, photo, other }
 
 extension FileCategoryX on FileCategory {
   String get label {
@@ -13,6 +13,8 @@ extension FileCategoryX on FileCategory {
         return 'Archives';
       case FileCategory.video:
         return 'Videos';
+      case FileCategory.photo:
+        return 'Photos';
       case FileCategory.other:
         return 'Autres';
     }

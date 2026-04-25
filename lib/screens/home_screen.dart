@@ -101,6 +101,13 @@ class HomeScreen extends StatelessWidget {
             count: provider.categoryCount(FileCategory.video),
             onTap: onOpenResults,
           ),
+          const SizedBox(height: 10),
+          CategorySummaryCard(
+            title: 'Photos',
+            icon: Icons.photo_library_outlined,
+            count: provider.categoryCount(FileCategory.photo),
+            onTap: onOpenResults,
+          ),
         ],
       ),
     );

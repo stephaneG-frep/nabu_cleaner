@@ -10,10 +10,12 @@ class FileResultTile extends StatelessWidget {
     required this.item,
     required this.selected,
     required this.onChanged,
+    this.recommended = false,
   });
 
   final ScanFileItem item;
   final bool selected;
+  final bool recommended;
   final ValueChanged<bool> onChanged;
 
   String _formatBytes(int bytes) {
@@ -50,6 +52,17 @@ class FileResultTile extends StatelessWidget {
             const SizedBox(height: 2),
             Text('${item.category.label} • ${_formatBytes(item.sizeBytes)}'),
             Text('Date: $dateLabel'),
+            if (recommended)
+              const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text(
+                  'Recommande a supprimer',
+                  style: TextStyle(
+                    color: Color(0xFF2EAF61),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             if (item.isSystemFile)
               const Text(
                 'Fichier systeme protege',
