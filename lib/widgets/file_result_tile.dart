@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../models/file_category.dart';
 import '../models/scan_file_item.dart';
@@ -42,7 +46,7 @@ class FileResultTile extends StatelessWidget {
       child: CheckboxListTile(
         value: selected,
         onChanged: (v) => onChanged(v ?? false),
-        secondary: const Icon(Icons.insert_drive_file_outlined),
+        secondary: FilePreviewThumb(item: item),
         title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,6 +76,119 @@ class FileResultTile extends StatelessWidget {
         ),
         controlAffinity: ListTileControlAffinity.leading,
       ),
+    );
+  }
+}
+
+class FilePreviewThumb extends StatefulWidget {
+  const FilePreviewThumb({super.key, required this.item});
+
+  final ScanFileItem item;
+
+  @override
+  State<FilePreviewThumb> createState() => _FilePreviewThumbState();
+}
+
+class _FilePreviewThumbState extends State<FilePreviewThumb> {
+  Future<Uint8List?>? _videoThumbFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _prepareThumbnail();
+  }
+
+  @override
+  void didUpdateWidget(covariant FilePreviewThumb oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.path != widget.item.path ||
+        oldWidget.item.category != widget.item.category) {
+      _prepareThumbnail();
+    }
+  }
+
+  void _prepareThumbnail() {
+    if (widget.item.category == FileCategory.video) {
+      _videoThumbFuture = VideoThumbnail.thumbnailData(
+        video: widget.item.path,
+        imageFormat: ImageFormat.JPEG,
+        maxWidth: 140,
+        quality: 55,
+      );
+      return;
+    }
+    _videoThumbFuture = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const size = 56.0;
+
+    if (widget.item.category == FileCategory.photo) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.file(
+          File(widget.item.path),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _fallbackThumb(Icons.photo_outlined);
+          },
+        ),
+      );
+    }
+
+    if (widget.item.category == FileCategory.video) {
+      return FutureBuilder<Uint8List?>(
+        future: _videoThumbFuture,
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data != null) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.memory(
+                    snapshot.data!,
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.black45,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            );
+          }
+          return _fallbackThumb(Icons.videocam_outlined);
+        },
+      );
+    }
+
+    return _fallbackThumb(Icons.insert_drive_file_outlined);
+  }
+
+  Widget _fallbackThumb(IconData icon) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: const Color(0x110A3A66),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon),
     );
   }
 }
