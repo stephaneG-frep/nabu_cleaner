@@ -118,6 +118,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                       final isDark =
                           Theme.of(context).brightness == Brightness.dark;
+                      final dialogBg = isDark
+                          ? const Color(0xFF4A5E80)
+                          : Colors.white;
                       final titleColor = isDark
                           ? const Color(0xFFF2F7FF)
                           : const Color(0xFF111827);
@@ -130,6 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       showDialog<void>(
                         context: context,
                         builder: (context) => AlertDialog(
+                          backgroundColor: dialogBg,
                           titleTextStyle: TextStyle(
                             color: titleColor,
                             fontSize: 20,

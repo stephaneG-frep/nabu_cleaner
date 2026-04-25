@@ -44,6 +44,14 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1F3A5A),
+        contentTextStyle: const TextStyle(
+          color: Color(0xFFF3F8FF),
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        actionTextColor: const Color(0xFFBDEEFF),
+        closeIconColor: const Color(0xFFEAF4FF),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
@@ -95,7 +103,14 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF1E2A40),
+        backgroundColor: const Color(0xFF2B4E78),
+        contentTextStyle: const TextStyle(
+          color: Color(0xFFF3F8FF),
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        actionTextColor: const Color(0xFFBDEEFF),
+        closeIconColor: const Color(0xFFEAF4FF),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );

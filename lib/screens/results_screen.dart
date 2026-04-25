@@ -83,6 +83,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
   Future<bool> _confirmDelete(BuildContext context, int count) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBg = isDark ? const Color(0xFF4A5E80) : Colors.white;
     final titleColor = isDark
         ? const Color(0xFFF2F7FF)
         : const Color(0xFF111827);
@@ -95,6 +96,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: dialogBg,
         titleTextStyle: TextStyle(
           color: titleColor,
           fontSize: 20,

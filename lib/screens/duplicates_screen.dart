@@ -29,6 +29,7 @@ class _DuplicatesScreenState extends State<DuplicatesScreen> {
 
   Future<bool> _confirm(BuildContext context, DuplicateGroup group) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBg = isDark ? const Color(0xFF4A5E80) : Colors.white;
     final titleColor = isDark
         ? const Color(0xFFF2F7FF)
         : const Color(0xFF111827);
@@ -42,6 +43,7 @@ class _DuplicatesScreenState extends State<DuplicatesScreen> {
     final answer = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: dialogBg,
         titleTextStyle: TextStyle(
           color: titleColor,
           fontSize: 20,
