@@ -17,9 +17,27 @@ class ResultsScreen extends StatefulWidget {
 }
 
 class _ResultsScreenState extends State<ResultsScreen> {
+  static const int _pageSize = 60;
+
   FileCategory? _categoryFilter;
   bool _showRecommendedOnly = false;
   ResultsSort _sort = ResultsSort.sizeDesc;
+  late final ScrollController _scrollController;
+  int _visibleCount = _pageSize;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()..addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
 
   String _formatBytes(int bytes) {
     if (bytes <= 0) return '0 B';
@@ -64,9 +82,25 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   Future<bool> _confirmDelete(BuildContext context, int count) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDark
+        ? const Color(0xFFF2F7FF)
+        : const Color(0xFF111827);
+    final contentColor = isDark
+        ? const Color(0xFFE3EEFF)
+        : const Color(0xFF374151);
+    final cancelColor = isDark
+        ? const Color(0xFFBDEEFF)
+        : Theme.of(context).colorScheme.primary;
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        titleTextStyle: TextStyle(
+          color: titleColor,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+        contentTextStyle: TextStyle(color: contentColor, fontSize: 15),
         title: const Text('Confirmation requise'),
         content: Text(
           'Vous allez supprimer $count element(s) selectionne(s). '
@@ -74,6 +108,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: cancelColor),
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Annuler'),
           ),
@@ -105,10 +140,29 @@ class _ResultsScreenState extends State<ResultsScreen> {
     }
   }
 
+  void _resetPagination() {
+    setState(() {
+      _visibleCount = _pageSize;
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels < position.maxScrollExtent - 280) return;
+    setState(() {
+      _visibleCount += _pageSize;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CleanerProvider>();
     final visibleItems = _applyFilterAndSort(provider.results);
+    final pagedItems = visibleItems.take(_visibleCount).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -116,7 +170,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
         actions: [
           PopupMenuButton<ResultsSort>(
             initialValue: _sort,
-            onSelected: (value) => setState(() => _sort = value),
+            onSelected: (value) {
+              _sort = value;
+              _resetPagination();
+            },
             itemBuilder: (context) => ResultsSort.values
                 .map(
                   (value) => PopupMenuItem(
@@ -152,8 +209,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         child: ChoiceChip(
                           label: const Text('Recommandes'),
                           selected: _showRecommendedOnly,
-                          onSelected: (value) =>
-                              setState(() => _showRecommendedOnly = value),
+                          onSelected: (value) {
+                            _showRecommendedOnly = value;
+                            _resetPagination();
+                          },
                         ),
                       ),
                       Padding(
@@ -161,8 +220,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         child: ChoiceChip(
                           label: const Text('Tout'),
                           selected: _categoryFilter == null,
-                          onSelected: (_) =>
-                              setState(() => _categoryFilter = null),
+                          onSelected: (_) {
+                            _categoryFilter = null;
+                            _resetPagination();
+                          },
                         ),
                       ),
                       ...FileCategory.values
@@ -173,8 +234,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                               child: ChoiceChip(
                                 label: Text(category.label),
                                 selected: _categoryFilter == category,
-                                onSelected: (_) =>
-                                    setState(() => _categoryFilter = category),
+                                onSelected: (_) {
+                                  _categoryFilter = category;
+                                  _resetPagination();
+                                },
                               ),
                             ),
                           ),
@@ -215,9 +278,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                           child: Text('Aucun fichier pour ce filtre.'),
                         )
                       : ListView.separated(
+                          controller: _scrollController,
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                           itemBuilder: (context, index) {
-                            final item = visibleItems[index];
+                            final item = pagedItems[index];
                             return FileResultTile(
                               item: item,
                               selected: provider.isSelected(item.id),
@@ -228,7 +292,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                           },
                           separatorBuilder: (context, index) =>
                               const SizedBox(height: 10),
-                          itemCount: visibleItems.length,
+                          itemCount: pagedItems.length,
                         ),
                 ),
               ],
@@ -276,7 +340,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
                                   SnackBar(
                                     content: Text(
                                       '${result.deleted.length} element(s) supprime(s), '
-                                      '${_formatBytes(result.releasedBytes)} liberes.',
+                                      '${_formatBytes(result.releasedBytes)} liberes. '
+                                      '${result.skipped.isNotEmpty ? '${result.skipped.length} ignore(s) (acces refuse/protege).' : ''}',
                                     ),
                                   ),
                                 );

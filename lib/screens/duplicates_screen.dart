@@ -28,16 +28,33 @@ class _DuplicatesScreenState extends State<DuplicatesScreen> {
   }
 
   Future<bool> _confirm(BuildContext context, DuplicateGroup group) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDark
+        ? const Color(0xFFF2F7FF)
+        : const Color(0xFF111827);
+    final contentColor = isDark
+        ? const Color(0xFFE3EEFF)
+        : const Color(0xFF374151);
+    final cancelColor = isDark
+        ? const Color(0xFFBDEEFF)
+        : Theme.of(context).colorScheme.primary;
     final deleteCount = group.items.length - 1;
     final answer = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        titleTextStyle: TextStyle(
+          color: titleColor,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+        contentTextStyle: TextStyle(color: contentColor, fontSize: 15),
         title: const Text('Confirmer le nettoyage des doublons'),
         content: Text(
           'Vous allez garder 1 fichier et supprimer $deleteCount doublon(s) dans ce groupe. Continuer ?',
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: cancelColor),
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Annuler'),
           ),
@@ -134,7 +151,8 @@ class _DuplicatesScreenState extends State<DuplicatesScreen> {
                                 SnackBar(
                                   content: Text(
                                     '${result.deleted.length} doublon(s) supprime(s), '
-                                    '${_formatBytes(result.releasedBytes)} liberes.',
+                                    '${_formatBytes(result.releasedBytes)} liberes. '
+                                    '${result.skipped.isNotEmpty ? '${result.skipped.length} ignore(s) (acces refuse/protege).' : ''}',
                                   ),
                                 ),
                               );

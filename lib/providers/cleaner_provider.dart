@@ -41,6 +41,7 @@ class CleanerProvider extends ChangeNotifier {
   String scanMessage = 'Pret a analyser';
   bool safeModeEnabled = true;
   bool realScanEnabled = true;
+  bool darkThemeEnabled = false;
 
   DateTime? lastScanAt;
   String? lastScanWarning;
@@ -77,6 +78,7 @@ class CleanerProvider extends ChangeNotifier {
     _history
       ..clear()
       ..addAll(_historyService.getEntries());
+    darkThemeEnabled = _historyService.isDarkThemeEnabled();
     isInitializing = false;
     notifyListeners();
   }
@@ -127,6 +129,12 @@ class CleanerProvider extends ChangeNotifier {
   void setRealScanEnabled(bool value) {
     realScanEnabled = value;
     notifyListeners();
+  }
+
+  Future<void> setDarkThemeEnabled(bool value) async {
+    darkThemeEnabled = value;
+    notifyListeners();
+    await _historyService.setDarkThemeEnabled(value);
   }
 
   void toggleSelection(String fileId, bool selected) {

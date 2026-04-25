@@ -26,6 +26,28 @@ class PermissionService {
     return const [Permission.photos, Permission.videos, Permission.audio];
   }
 
+  Future<bool> isManageAllFilesSupported() async {
+    final sdk = await _androidSdkInt();
+    return sdk != null && sdk >= 30;
+  }
+
+  Future<bool> hasManageAllFilesAccess() async {
+    final supported = await isManageAllFilesSupported();
+    if (!supported) {
+      return true;
+    }
+    return Permission.manageExternalStorage.status.then((s) => s.isGranted);
+  }
+
+  Future<bool> requestManageAllFilesAccess() async {
+    final supported = await isManageAllFilesSupported();
+    if (!supported) {
+      return true;
+    }
+    final status = await Permission.manageExternalStorage.request();
+    return status.isGranted;
+  }
+
   Future<Map<Permission, PermissionStatus>> checkStatuses() async {
     final required = await requiredPermissions();
     final statuses = <Permission, PermissionStatus>{};

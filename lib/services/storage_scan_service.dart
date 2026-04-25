@@ -71,6 +71,10 @@ class StorageScanService {
     '/Android/obb/',
     '/.thumbnails/',
     '/cache/',
+    '/tmp/',
+    '/temp/',
+    '/Android/media/.Trash/',
+    '/Recycle/',
   ];
 
   Future<ScanReport> runSimulatedScan({
@@ -326,7 +330,9 @@ class StorageScanService {
         })
         .toList();
 
-    files.sort((a, b) => b.sizeBytes.compareTo(a.sizeBytes));
+    files.sort(
+      (a, b) => _scanPriorityScore(b).compareTo(_scanPriorityScore(a)),
+    );
     final scannedBytes = files.fold<int>(
       0,
       (sum, item) => sum + item.sizeBytes,
@@ -473,5 +479,37 @@ class StorageScanService {
       return true;
     }
     return _blockedPathFragments.any(normalized.contains);
+  }
+
+  int _scanPriorityScore(ScanFileItem item) {
+    final ageDays = DateTime.now().difference(item.modifiedAt).inDays;
+    var categoryWeight = 0;
+    switch (item.category) {
+      case FileCategory.duplicate:
+        categoryWeight = 1_000_000_000;
+        break;
+      case FileCategory.large:
+        categoryWeight = 850_000_000;
+        break;
+      case FileCategory.archive:
+        categoryWeight = 800_000_000;
+        break;
+      case FileCategory.apk:
+        categoryWeight = 760_000_000;
+        break;
+      case FileCategory.video:
+        categoryWeight = 680_000_000;
+        break;
+      case FileCategory.photo:
+        categoryWeight = 300_000_000;
+        break;
+      case FileCategory.other:
+        categoryWeight = 100_000_000;
+        break;
+    }
+
+    final ageBonus = ageDays.clamp(0, 720) * 200000;
+    final sizeBonus = (item.sizeBytes / (1024 * 1024)).round();
+    return categoryWeight + ageBonus + sizeBonus;
   }
 }

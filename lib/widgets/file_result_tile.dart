@@ -3,10 +3,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../models/file_category.dart';
 import '../models/scan_file_item.dart';
+import '../services/media_preview_service.dart';
 
 class FileResultTile extends StatelessWidget {
   const FileResultTile({
@@ -109,11 +109,9 @@ class _FilePreviewThumbState extends State<FilePreviewThumb> {
 
   void _prepareThumbnail() {
     if (widget.item.category == FileCategory.video) {
-      _videoThumbFuture = VideoThumbnail.thumbnailData(
-        video: widget.item.path,
-        imageFormat: ImageFormat.JPEG,
+      _videoThumbFuture = MediaPreviewService.instance.getVideoThumbnail(
+        path: widget.item.path,
         maxWidth: 140,
-        quality: 55,
       );
       return;
     }

@@ -35,11 +35,19 @@ class NabuCleanerApp extends StatelessWidget {
           )..initialize(),
         ),
       ],
-      child: MaterialApp(
-        title: 'Nabu Cleaner',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        home: const ShellScreen(),
+      child: Consumer<CleanerProvider>(
+        builder: (context, provider, child) {
+          return MaterialApp(
+            title: 'Nabu Cleaner',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: provider.darkThemeEnabled
+                ? ThemeMode.dark
+                : ThemeMode.light,
+            home: const ShellScreen(),
+          );
+        },
       ),
     );
   }

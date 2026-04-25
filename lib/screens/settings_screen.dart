@@ -15,6 +15,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   Map<Permission, PermissionStatus> _statuses = const {};
+  bool _manageAllFilesSupported = false;
+  bool _manageAllFilesGranted = false;
 
   @override
   void initState() {
@@ -23,10 +25,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _refreshStatus() async {
-    final statusMap = await context.read<PermissionService>().checkStatuses();
+    final permissionService = context.read<PermissionService>();
+    final statusMap = await permissionService.checkStatuses();
+    final manageSupported = await permissionService.isManageAllFilesSupported();
+    final manageGranted = await permissionService.hasManageAllFilesAccess();
     if (!mounted) return;
     setState(() {
       _statuses = statusMap;
+      _manageAllFilesSupported = manageSupported;
+      _manageAllFilesGranted = manageGranted;
     });
   }
 
@@ -37,6 +44,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _openAndroidSettings() async {
     await openAppSettings();
+  }
+
+  Future<void> _requestManageAllFiles() async {
+    await context.read<PermissionService>().requestManageAllFilesAccess();
+    await _refreshStatus();
   }
 
   Future<void> _openFolderPicker() async {
@@ -104,9 +116,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         provider.setSafeMode(true);
                         return;
                       }
+                      final isDark =
+                          Theme.of(context).brightness == Brightness.dark;
+                      final titleColor = isDark
+                          ? const Color(0xFFF2F7FF)
+                          : const Color(0xFF111827);
+                      final contentColor = isDark
+                          ? const Color(0xFFE3EEFF)
+                          : const Color(0xFF374151);
+                      final cancelColor = isDark
+                          ? const Color(0xFFBDEEFF)
+                          : Theme.of(context).colorScheme.primary;
                       showDialog<void>(
                         context: context,
                         builder: (context) => AlertDialog(
+                          titleTextStyle: TextStyle(
+                            color: titleColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          contentTextStyle: TextStyle(
+                            color: contentColor,
+                            fontSize: 15,
+                          ),
                           title: const Text('Desactiver le mode securite ?'),
                           content: const Text(
                             'Cela peut augmenter les risques de suppression non voulue. '
@@ -114,6 +146,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           actions: [
                             TextButton(
+                              style: TextButton.styleFrom(
+                                foregroundColor: cancelColor,
+                              ),
                               onPressed: () => Navigator.pop(context),
                               child: const Text('Annuler'),
                             ),
@@ -129,6 +164,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       );
                     },
                     title: const Text('Mode securite actif'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_manageAllFilesSupported) ...[
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.folder_shared_outlined),
+                      title: const Text('Acces a tous les fichiers'),
+                      subtitle: Text(
+                        _manageAllFilesGranted
+                            ? 'Accorde: suppression reelle elargie activee.'
+                            : 'Non accorde: certaines suppressions Android peuvent echouer.',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        FilledButton.tonal(
+                          onPressed: _requestManageAllFiles,
+                          child: const Text('Autoriser'),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: _openAndroidSettings,
+                          child: const Text('Ouvrir reglages Android'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Apparence',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  const Text('Choisissez le theme de l\'application.'),
+                  const SizedBox(height: 8),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    value: provider.darkThemeEnabled,
+                    onChanged: (value) => context
+                        .read<CleanerProvider>()
+                        .setDarkThemeEnabled(value),
+                    title: const Text('Theme sombre'),
                   ),
                 ],
               ),
